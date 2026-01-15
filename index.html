@@ -1,14 +1,21 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Presence</title>
+    <title>Resolution — EVENT-CLOSED</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       body {
-        font-family: -apple-system, system-ui, Arial;
+        font-family: -apple-system, system-ui, Arial, sans-serif;
         margin: 24px;
         max-width: 980px;
+      }
+      h1 {
+        margin: 0 0 6px 0;
+      }
+      .sub {
+        margin: 0 0 18px 0;
+        color: #666;
       }
       .row {
         display: flex;
@@ -16,27 +23,21 @@
         flex-wrap: wrap;
         margin-bottom: 12px;
       }
-      button {
-        padding: 10px 12px;
-        border-radius: 8px;
+      .card {
+        border: 1px solid #ddd;
+        padding: 14px;
+        border-radius: 12px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
         border: 1px solid #ccc;
+        font-size: 12px;
         background: #fff;
-        cursor: pointer;
       }
-      button:hover {
-        background: #f5f5f5;
-      }
-      button:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-      }
-      textarea,
-      input,
-      select {
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       }
       pre {
         background: #0b0b0b;
@@ -44,258 +45,216 @@
         padding: 12px;
         border-radius: 10px;
         overflow: auto;
+        margin: 0;
       }
-      .card {
-        border: 1px solid #ddd;
-        padding: 14px;
-        border-radius: 12px;
+      a { color: inherit; }
+      small { color: #666; }
+      .ok { border-color: #5bb974; }
+      .warn { border-color: #d7a400; }
+      .bad { border-color: #d14; }
+      button {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        background: #fff;
+        cursor: pointer;
       }
-      small {
-        color: #666;
-      }
-      .mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-          monospace;
+      button:hover { background: #f5f5f5; }
+      select, input {
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
       }
     </style>
   </head>
+
   <body>
-    <h1>Presence Backend (Local)</h1>
-    <p>
-      <small
-        >Local-only governance substrate. No identity. No external
-        execution.</small
-      >
+    <h1>Resolution <span class="badge mono">EVENT-CLOSED</span></h1>
+    <p class="sub">
+      Public witness surface (read-only). Canonical artifacts are served from <span class="mono">/ledger/…</span>.
     </p>
 
     <div class="card">
-      <h3>Input</h3>
-      <textarea
-        id="inputText"
-        rows="4"
-        placeholder="Type input here..."
-      ></textarea>
-      <div class="row" style="margin-top: 10px">
-        <button id="btnStart" onclick="act('START')">START</button>
-        <button id="btnRecognize" onclick="act('RECOGNIZE')">RECOGNIZE</button>
-        <button id="btnHold" onclick="act('HOLD')">HOLD</button>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top: 14px">
-      <h3>Exit</h3>
-      <div class="row">
-        <select id="exitChoice">
-          <option value="INVALIDATE">INVALIDATE</option>
-          <option value="REVISE">REVISE</option>
-          <option value="FINALIZE">FINALIZE (requires IAM.MAI)</option>
-        </select>
-        <button id="btnExit" onclick="exitHold()">EXIT</button>
-      </div>
-
-      <h3>IAM.MAI</h3>
-      <div class="row">
-        <input id="role" placeholder="authority_role (e.g., MAI)" value="MAI" />
-        <input
-          id="transition"
-          placeholder="transition (e.g., EVENT-LIVE / EVENT-CLOSE / PoP FINALIZE)"
-          value=""
-        />
-        <button id="btnIamMai" onclick="iamMai()">IAM.MAI FINALIZE</button>
-        <button id="btnClearBlock" onclick="act('CLEAR_BLOCK')">
-          CLEAR_BLOCK
-        </button>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top: 14px">
-      <h3>State</h3>
-
-      <!-- State badges + next required action -->
-      <div class="row">
-        <div class="card" style="flex: 1; text-align: left; user-select: text">
-          <div><b>Motion:</b> <span id="badgeMotion" class="mono">—</span></div>
-          <div><b>Event:</b> <span id="badgeEvent" class="mono">—</span></div>
-          <div>
-            <b>Hold exit:</b> <span id="badgeHoldExit" class="mono">—</span>
-          </div>
-          <div><b>Last:</b> <span id="badgeLast" class="mono">—</span></div>
+      <div class="row" style="align-items:center; justify-content:space-between;">
+        <div>
+          <div><b>Motion:</b> <span class="badge mono">RESOLUTION</span></div>
+          <div style="margin-top:6px;"><b>Event state:</b> <span class="badge mono">EVENT-CLOSED</span></div>
         </div>
-
-        <div class="card" style="flex: 1; text-align: left; user-select: text">
-          <div><b>Next required action</b></div>
-          <div id="nextAction" style="margin-top: 8px">—</div>
+        <div class="row" style="margin:0;">
+          <button onclick="refreshAll()">REFRESH</button>
         </div>
       </div>
 
-      <div class="row">
-        <button onclick="refresh()">REFRESH</button>
-        <button onclick="resetState()">RESET (dev)</button>
+      <div style="margin-top:10px;">
+        <small>
+          Entry point:
+          <a class="mono" href="/ledger/index.json">/ledger/index.json</a>
+        </small>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3 style="margin-top:0;">Event</h3>
+      <div class="row" style="align-items:center;">
+        <label>
+          <small>Choose event</small><br />
+          <select id="eventSelect" onchange="loadSelectedEvent()"></select>
+        </label>
+        <label>
+          <small>Latest version</small><br />
+          <input id="latestVersion" class="mono" readonly />
+        </label>
       </div>
 
-      <pre id="stateView">Loading...</pre>
+      <div style="margin-top:10px;">
+        <div><b>Decision URL:</b> <a id="decisionUrl" class="mono" href="#">—</a></div>
+        <div style="margin-top:6px;"><b>Declaration URL:</b> <a id="declUrl" class="mono" href="#">—</a></div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div><b>Integrity:</b> <span id="integrity" class="badge mono warn">not checked</span></div>
+        <small>
+          Integrity check compares <span class="mono">decision.declaration_hash_sha256</span> with the computed SHA-256 of
+          <span class="mono">reality_declaration.json</span>.
+        </small>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3 style="margin-top:0;">Decision (proof_of_reality)</h3>
+      <pre id="decisionView">Loading…</pre>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3 style="margin-top:0;">Reality Declaration</h3>
+      <pre id="declView">Loading…</pre>
     </div>
 
     <script>
-      let lastState = null;
+      const $ = (id) => document.getElementById(id);
 
-      function updateActionState(state) {
-        if (!state) {
+      function joinUrl(base, rel) {
+        // rel can be "./x.json" or "/ledger/..."
+        if (!rel) return null;
+        if (rel.startsWith("http://") || rel.startsWith("https://")) return rel;
+        if (rel.startsWith("/")) return rel;
+        // base like "/ledger/events/za-extra-kraj/2026-.../"
+        return base.replace(/\/+$/, "") + "/" + rel.replace(/^\.?\//, "");
+      }
+
+      async function fetchJson(url) {
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) throw new Error(`${url} → ${r.status}`);
+        return await r.json();
+      }
+
+      async function fetchText(url) {
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) throw new Error(`${url} → ${r.status}`);
+        return await r.text();
+      }
+
+      async function sha256Hex(text) {
+        const enc = new TextEncoder();
+        const bytes = enc.encode(text);
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        return Array.from(new Uint8Array(digest))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+
+      function setIntegrity(state, msg) {
+        const el = $("integrity");
+        el.textContent = msg;
+        el.classList.remove("ok", "warn", "bad");
+        el.classList.add(state);
+      }
+
+      async function bootstrapEvents() {
+        // Load /ledger/index.json (catalog)
+        const index = await fetchJson("/ledger/index.json");
+
+        const events = Array.isArray(index.events) ? index.events : [];
+        const select = $("eventSelect");
+        select.innerHTML = "";
+
+        if (events.length === 0) {
+          select.innerHTML = `<option value="">(no events in /ledger/index.json)</option>`;
           return;
         }
-        const motion = state?.motion?.state ?? "—";
-        const holdExit = state?.motion?.hold_exit ?? "—";
-        const inputText = document.getElementById("inputText").value;
-        const role = document.getElementById("role").value.trim();
-        const hasInput = inputText.trim().length > 0;
-        const hasRole = role.length > 0;
 
-        // Legality rules (match your current simple backend)
-        const isBlocked = motion === "BLOCKED";
-        const canStart = motion === "IDLE" && !isBlocked && hasInput;
-        const canRecognize = motion === "RECOGNITION" && !isBlocked;
-        const canHold = motion === "HOLD" && !isBlocked;
-        const canExit = motion === "HOLD" && !isBlocked;
-
-        // Critical: IAM.MAI must be disabled unless FINALIZE was requested via EXIT(FINALIZE)
-        const canIamMai =
-          motion === "HOLD" && holdExit === "FINALIZE" && !isBlocked && hasRole;
-
-        const canClearBlock = isBlocked;
-
-        // Apply enable/disable
-        document.getElementById("btnStart").disabled = !canStart;
-        document.getElementById("btnRecognize").disabled = !canRecognize;
-        document.getElementById("btnHold").disabled = !canHold;
-        document.getElementById("btnExit").disabled = !canExit;
-        document.getElementById("btnIamMai").disabled = !canIamMai;
-        document.getElementById("btnClearBlock").disabled = !canClearBlock;
-      }
-
-      function updateNextAction(state) {
-        if (!state) {
-          document.getElementById("nextAction").textContent = "—";
-          return;
-        }
-        const motion = state?.motion?.state ?? "—";
-        const holdExit = state?.motion?.hold_exit ?? "—";
-        const inputText = document.getElementById("inputText").value;
-        const role = document.getElementById("role").value.trim();
-        const hasInput = inputText.trim().length > 0;
-        const hasRole = role.length > 0;
-
-        // Next required action (single-line instruction)
-        let next = "—";
-
-        if (motion === "BLOCKED") {
-          next = "System is BLOCKED → click CLEAR_BLOCK.";
-        } else if (motion === "IDLE") {
-          next = hasInput
-            ? "Input ready → click START."
-            : "Type input to enable START.";
-        } else if (motion === "RECOGNITION") {
-          next = "Click RECOGNIZE to enter HOLD.";
-        } else if (motion === "HOLD" && holdExit !== "FINALIZE") {
-          next =
-            "Choose EXIT path. For EVENT-LIVE: select FINALIZE in dropdown → click EXIT.";
-        } else if (motion === "HOLD" && holdExit === "FINALIZE") {
-          next = hasRole
-            ? 'FINALIZE requested → enter transition (e.g., "EVENT-LIVE") → click IAM.MAI FINALIZE.'
-            : "FINALIZE requested → enter authority_role to enable IAM.MAI.";
-        } else if (motion === "RESOLUTION") {
-          next = "RESOLUTION reached (demo). Use RESET (dev) to restart cycle.";
+        for (const e of events) {
+          const opt = document.createElement("option");
+          opt.value = e.event_id;
+          opt.textContent = `${e.event_id} — ${e.event || ""}`.trim();
+          select.appendChild(opt);
         }
 
-        document.getElementById("nextAction").textContent = next;
+        // Auto-load first event
+        await loadSelectedEvent();
       }
 
-      async function refresh() {
-        const r = await fetch("/api/state");
-        const s = await r.json();
-        lastState = s;
+      async function loadSelectedEvent() {
+        try {
+          setIntegrity("warn", "loading…");
 
-        // Render raw state
-        document.getElementById("stateView").textContent = JSON.stringify(
-          s,
-          null,
-          2
-        );
+          const eventId = $("eventSelect").value;
+          if (!eventId) return;
 
-        // Extract key fields
-        const motion = s?.motion?.state ?? "—";
-        const holdExit = s?.motion?.hold_exit ?? "—";
-        const eventState = s?.event?.state ?? "—";
-        const lastGuard = s?.last?.guard ?? "";
-        const lastDecision = s?.last?.decision ?? "";
-        const lastReason = s?.last?.reason ?? "";
+          // latest pointer
+          const latestPath = `/ledger/events/${eventId}/latest.json`;
+          const latest = await fetchJson(latestPath);
 
-        // Badges
-        document.getElementById("badgeMotion").textContent = motion;
-        document.getElementById("badgeEvent").textContent = eventState;
-        document.getElementById("badgeHoldExit").textContent = holdExit;
-        document.getElementById("badgeLast").textContent = lastReason
-          ? `${lastGuard}:${lastDecision} — ${lastReason}`
-          : "—";
+          $("latestVersion").value = latest.latest_version || "";
 
-        updateActionState(s);
-        updateNextAction(s);
+          // decision path is relative to /ledger/events/<id>/
+          const eventBase = `/ledger/events/${eventId}`;
+          const decisionUrl = joinUrl(eventBase, latest.latest_decision);
+
+          $("decisionUrl").href = decisionUrl;
+          $("decisionUrl").textContent = decisionUrl;
+
+          const decision = await fetchJson(decisionUrl);
+          $("decisionView").textContent = JSON.stringify(decision, null, 2);
+
+          // declaration path is relative to decision folder
+          const decisionFolder = decisionUrl.replace(/\/[^\/]+$/, ""); // strip filename
+          const declRel = decision?.artifacts?.reality_declaration_json || "./reality_declaration.json";
+          const declUrl = joinUrl(decisionFolder, declRel);
+
+          $("declUrl").href = declUrl;
+          $("declUrl").textContent = declUrl;
+
+          // try to fetch declaration JSON as text (for hashing), then also pretty-print
+          const declText = await fetchText(declUrl);
+          let declJson = null;
+          try { declJson = JSON.parse(declText); } catch (_) {}
+          $("declView").textContent = declJson ? JSON.stringify(declJson, null, 2) : declText;
+
+          // integrity check
+          const computed = await sha256Hex(declText);
+          const expected = decision.declaration_hash_sha256 || "";
+
+          if (!expected) {
+            setIntegrity("warn", "no expected hash in decision");
+          } else if (computed.toLowerCase() === expected.toLowerCase()) {
+            setIntegrity("ok", "hash verified ✓");
+          } else {
+            setIntegrity("bad", `hash mismatch ✗ (computed ${computed.slice(0, 12)}…)`);
+          }
+        } catch (err) {
+          $("decisionView").textContent = String(err);
+          $("declView").textContent = "—";
+          setIntegrity("bad", "error");
+        }
       }
 
-      async function act(action) {
-        const inputText = document.getElementById("inputText").value;
-        await fetch("/api/action", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action, payload: { input: inputText } }),
-        });
-        await refresh();
+      async function refreshAll() {
+        await loadSelectedEvent();
       }
-
-      async function exitHold() {
-        const choice = document.getElementById("exitChoice").value;
-        await fetch("/api/action", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "EXIT", payload: { exit: choice } }),
-        });
-        await refresh();
-      }
-
-      async function iamMai() {
-        const role = document.getElementById("role").value.trim();
-        const transition = document.getElementById("transition").value.trim();
-        await fetch("/api/action", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "IAM_MAI_FINALIZE",
-            payload: { invocation: { authority_role: role, transition } },
-          }),
-        });
-        await refresh();
-      }
-
-      async function resetState() {
-        await fetch("/api/action", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "RESET", payload: {} }),
-        });
-        await refresh();
-      }
-
-      document.getElementById("inputText").addEventListener("input", () => {
-        updateActionState(lastState);
-        updateNextAction(lastState);
-      });
-
-      document.getElementById("role").addEventListener("input", () => {
-        updateActionState(lastState);
-        updateNextAction(lastState);
-      });
 
       // Boot
-      refresh();
+      bootstrapEvents();
     </script>
   </body>
 </html>
