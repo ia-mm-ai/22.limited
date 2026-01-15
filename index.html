@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Presence</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: -apple-system, system-ui, Arial;
+        margin: 24px;
+        max-width: 980px;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      button {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        background: #fff;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #f5f5f5;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      textarea,
+      input,
+      select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+      }
+      pre {
+        background: #0b0b0b;
+        color: #e8e8e8;
+        padding: 12px;
+        border-radius: 10px;
+        overflow: auto;
+      }
+      .card {
+        border: 1px solid #ddd;
+        padding: 14px;
+        border-radius: 12px;
+      }
+      small {
+        color: #666;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Presence Backend (Local)</h1>
+    <p>
+      <small
+        >Local-only governance substrate. No identity. No external
+        execution.</small
+      >
+    </p>
+
+    <div class="card">
+      <h3>Input</h3>
+      <textarea
+        id="inputText"
+        rows="4"
+        placeholder="Type input here..."
+      ></textarea>
+      <div class="row" style="margin-top: 10px">
+        <button id="btnStart" onclick="act('START')">START</button>
+        <button id="btnRecognize" onclick="act('RECOGNIZE')">RECOGNIZE</button>
+        <button id="btnHold" onclick="act('HOLD')">HOLD</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 14px">
+      <h3>Exit</h3>
+      <div class="row">
+        <select id="exitChoice">
+          <option value="INVALIDATE">INVALIDATE</option>
+          <option value="REVISE">REVISE</option>
+          <option value="FINALIZE">FINALIZE (requires IAM.MAI)</option>
+        </select>
+        <button id="btnExit" onclick="exitHold()">EXIT</button>
+      </div>
+
+      <h3>IAM.MAI</h3>
+      <div class="row">
+        <input id="role" placeholder="authority_role (e.g., MAI)" value="MAI" />
+        <input
+          id="transition"
+          placeholder="transition (e.g., EVENT-LIVE / EVENT-CLOSE / PoP FINALIZE)"
+          value=""
+        />
+        <button id="btnIamMai" onclick="iamMai()">IAM.MAI FINALIZE</button>
+        <button id="btnClearBlock" onclick="act('CLEAR_BLOCK')">
+          CLEAR_BLOCK
+        </button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 14px">
+      <h3>State</h3>
+
+      <!-- State badges + next required action -->
+      <div class="row">
+        <div class="card" style="flex: 1; text-align: left; user-select: text">
+          <div><b>Motion:</b> <span id="badgeMotion" class="mono">—</span></div>
+          <div><b>Event:</b> <span id="badgeEvent" class="mono">—</span></div>
+          <div>
+            <b>Hold exit:</b> <span id="badgeHoldExit" class="mono">—</span>
+          </div>
+          <div><b>Last:</b> <span id="badgeLast" class="mono">—</span></div>
+        </div>
+
+        <div class="card" style="flex: 1; text-align: left; user-select: text">
+          <div><b>Next required action</b></div>
+          <div id="nextAction" style="margin-top: 8px">—</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button onclick="refresh()">REFRESH</button>
+        <button onclick="resetState()">RESET (dev)</button>
+      </div>
+
+      <pre id="stateView">Loading...</pre>
+    </div>
+
+    <script>
+      let lastState = null;
+
+      function updateActionState(state) {
+        if (!state) {
+          return;
+        }
+        const motion = state?.motion?.state ?? "—";
+        const holdExit = state?.motion?.hold_exit ?? "—";
+        const inputText = document.getElementById("inputText").value;
+        const role = document.getElementById("role").value.trim();
+        const hasInput = inputText.trim().length > 0;
+        const hasRole = role.length > 0;
+
+        // Legality rules (match your current simple backend)
+        const isBlocked = motion === "BLOCKED";
+        const canStart = motion === "IDLE" && !isBlocked && hasInput;
+        const canRecognize = motion === "RECOGNITION" && !isBlocked;
+        const canHold = motion === "HOLD" && !isBlocked;
+        const canExit = motion === "HOLD" && !isBlocked;
+
+        // Critical: IAM.MAI must be disabled unless FINALIZE was requested via EXIT(FINALIZE)
+        const canIamMai =
+          motion === "HOLD" && holdExit === "FINALIZE" && !isBlocked && hasRole;
+
+        const canClearBlock = isBlocked;
+
+        // Apply enable/disable
+        document.getElementById("btnStart").disabled = !canStart;
+        document.getElementById("btnRecognize").disabled = !canRecognize;
+        document.getElementById("btnHold").disabled = !canHold;
+        document.getElementById("btnExit").disabled = !canExit;
+        document.getElementById("btnIamMai").disabled = !canIamMai;
+        document.getElementById("btnClearBlock").disabled = !canClearBlock;
+      }
+
+      function updateNextAction(state) {
+        if (!state) {
+          document.getElementById("nextAction").textContent = "—";
+          return;
+        }
+        const motion = state?.motion?.state ?? "—";
+        const holdExit = state?.motion?.hold_exit ?? "—";
+        const inputText = document.getElementById("inputText").value;
+        const role = document.getElementById("role").value.trim();
+        const hasInput = inputText.trim().length > 0;
+        const hasRole = role.length > 0;
+
+        // Next required action (single-line instruction)
+        let next = "—";
+
+        if (motion === "BLOCKED") {
+          next = "System is BLOCKED → click CLEAR_BLOCK.";
+        } else if (motion === "IDLE") {
+          next = hasInput
+            ? "Input ready → click START."
+            : "Type input to enable START.";
+        } else if (motion === "RECOGNITION") {
+          next = "Click RECOGNIZE to enter HOLD.";
+        } else if (motion === "HOLD" && holdExit !== "FINALIZE") {
+          next =
+            "Choose EXIT path. For EVENT-LIVE: select FINALIZE in dropdown → click EXIT.";
+        } else if (motion === "HOLD" && holdExit === "FINALIZE") {
+          next = hasRole
+            ? 'FINALIZE requested → enter transition (e.g., "EVENT-LIVE") → click IAM.MAI FINALIZE.'
+            : "FINALIZE requested → enter authority_role to enable IAM.MAI.";
+        } else if (motion === "RESOLUTION") {
+          next = "RESOLUTION reached (demo). Use RESET (dev) to restart cycle.";
+        }
+
+        document.getElementById("nextAction").textContent = next;
+      }
+
+      async function refresh() {
+        const r = await fetch("/api/state");
+        const s = await r.json();
+        lastState = s;
+
+        // Render raw state
+        document.getElementById("stateView").textContent = JSON.stringify(
+          s,
+          null,
+          2
+        );
+
+        // Extract key fields
+        const motion = s?.motion?.state ?? "—";
+        const holdExit = s?.motion?.hold_exit ?? "—";
+        const eventState = s?.event?.state ?? "—";
+        const lastGuard = s?.last?.guard ?? "";
+        const lastDecision = s?.last?.decision ?? "";
+        const lastReason = s?.last?.reason ?? "";
+
+        // Badges
+        document.getElementById("badgeMotion").textContent = motion;
+        document.getElementById("badgeEvent").textContent = eventState;
+        document.getElementById("badgeHoldExit").textContent = holdExit;
+        document.getElementById("badgeLast").textContent = lastReason
+          ? `${lastGuard}:${lastDecision} — ${lastReason}`
+          : "—";
+
+        updateActionState(s);
+        updateNextAction(s);
+      }
+
+      async function act(action) {
+        const inputText = document.getElementById("inputText").value;
+        await fetch("/api/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, payload: { input: inputText } }),
+        });
+        await refresh();
+      }
+
+      async function exitHold() {
+        const choice = document.getElementById("exitChoice").value;
+        await fetch("/api/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "EXIT", payload: { exit: choice } }),
+        });
+        await refresh();
+      }
+
+      async function iamMai() {
+        const role = document.getElementById("role").value.trim();
+        const transition = document.getElementById("transition").value.trim();
+        await fetch("/api/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "IAM_MAI_FINALIZE",
+            payload: { invocation: { authority_role: role, transition } },
+          }),
+        });
+        await refresh();
+      }
+
+      async function resetState() {
+        await fetch("/api/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "RESET", payload: {} }),
+        });
+        await refresh();
+      }
+
+      document.getElementById("inputText").addEventListener("input", () => {
+        updateActionState(lastState);
+        updateNextAction(lastState);
+      });
+
+      document.getElementById("role").addEventListener("input", () => {
+        updateActionState(lastState);
+        updateNextAction(lastState);
+      });
+
+      // Boot
+      refresh();
+    </script>
+  </body>
+</html>
