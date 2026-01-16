@@ -2,21 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Resolution — EVENT-CLOSED</title>
+    <title>Resolution — Witness</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Witness declaration (machine friendly) -->
+    <link rel="canonical" href="https://22.limited/" />
+    <link rel="alternate" type="application/json" title="witness" href="/witness.json" />
+    <link rel="alternate" type="application/json" title="third.site root" href="https://third.site/root.json" />
+    <link rel="alternate" type="application/json" title="instances index" href="https://third.site/instances/index.json" />
+
     <style>
       body {
         font-family: -apple-system, system-ui, Arial, sans-serif;
         margin: 24px;
         max-width: 980px;
       }
-      h1 {
-        margin: 0 0 6px 0;
-      }
-      .sub {
-        margin: 0 0 18px 0;
-        color: #666;
-      }
+      h1 { margin: 0 0 6px 0; }
+      .sub { margin: 0 0 18px 0; color: #666; }
       .row {
         display: flex;
         gap: 12px;
@@ -69,16 +71,17 @@
   </head>
 
   <body>
-    <h1>Resolution <span class="badge mono">EVENT-CLOSED</span></h1>
+    <h1>Resolution <span class="badge mono">WITNESS</span></h1>
     <p class="sub">
-      Public witness surface (read-only). Canonical artifacts are served from <span class="mono">/ledger/…</span>.
+      Public witness surface (read-only). Instances are served from
+      <a class="mono" href="https://third.site/instances/index.json" target="_blank" rel="noopener">third.site/instances</a>.
     </p>
 
     <div class="card">
       <div class="row" style="align-items:center; justify-content:space-between;">
         <div>
           <div><b>Motion:</b> <span class="badge mono">RESOLUTION</span></div>
-          <div style="margin-top:6px;"><b>Event state:</b> <span class="badge mono">EVENT-CLOSED</span></div>
+          <div style="margin-top:6px;"><b>Role:</b> <span class="badge mono">DERIVATIVE_WITNESS</span></div>
         </div>
         <div class="row" style="margin:0;">
           <button onclick="refreshAll()">REFRESH</button>
@@ -87,22 +90,25 @@
 
       <div style="margin-top:10px;">
         <small>
-          Entry point:
-          <a class="mono" href="/ledger/index.json">/ledger/index.json</a>
+          Root:
+          <a class="mono" href="https://third.site/root.json" target="_blank" rel="noopener">https://third.site/root.json</a>
+          &nbsp;•&nbsp;
+          Entry:
+          <a class="mono" href="https://third.site/instances/index.json" target="_blank" rel="noopener">instances/index.json</a>
         </small>
       </div>
     </div>
 
     <div class="card" style="margin-top:14px;">
-      <h3 style="margin-top:0;">Event</h3>
+      <h3 style="margin-top:0;">Instance</h3>
       <div class="row" style="align-items:center;">
         <label>
-          <small>Choose event</small><br />
-          <select id="eventSelect" onchange="loadSelectedEvent()"></select>
+          <small>Choose instance (event • timestamp)</small><br />
+          <select id="instanceSelect" onchange="loadSelectedInstance()"></select>
         </label>
         <label>
-          <small>Latest version</small><br />
-          <input id="latestVersion" class="mono" readonly />
+          <small>Timestamp</small><br />
+          <input id="ts" class="mono" readonly />
         </label>
       </div>
 
@@ -133,13 +139,14 @@
     <script>
       const $ = (id) => document.getElementById(id);
 
-      function joinUrl(base, rel) {
-        // rel can be "./x.json" or "/ledger/..."
-        if (!rel) return null;
-        if (rel.startsWith("http://") || rel.startsWith("https://")) return rel;
-        if (rel.startsWith("/")) return rel;
-        // base like "/ledger/events/za-extra-kraj/2026-.../"
-        return base.replace(/\/+$/, "") + "/" + rel.replace(/^\.?\//, "");
+      const ROOT = "https://third.site";
+      const INSTANCES_INDEX = `${ROOT}/instances/index.json`;
+
+      function abs(urlOrPath) {
+        if (!urlOrPath) return null;
+        if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")) return urlOrPath;
+        if (urlOrPath.startsWith("/")) return ROOT + urlOrPath;
+        return ROOT + "/" + urlOrPath.replace(/^\.?\//, "");
       }
 
       async function fetchJson(url) {
@@ -170,68 +177,72 @@
         el.classList.add(state);
       }
 
-      async function bootstrapEvents() {
-        // Load /ledger/index.json (catalog)
-        const index = await fetchJson("/ledger/index.json");
+      // We index *instances*, not "events + latest.json".
+      // Your third.site schema already gives us the exact URLs.
+      let INSTANCES = [];
 
-        const events = Array.isArray(index.events) ? index.events : [];
-        const select = $("eventSelect");
+      function instanceLabel(i) {
+        const ev = i.event_id || "unknown";
+        const ts = i.timestamp_utc || i.timestamp || "unknown-time";
+        return `${ev} • ${ts}`;
+      }
+
+      async function bootstrapInstances() {
+        const idx = await fetchJson(INSTANCES_INDEX);
+        const list = Array.isArray(idx.instances) ? idx.instances : [];
+
+        // Sort newest first by timestamp_utc when possible
+        list.sort((a, b) => String(b.timestamp_utc || "").localeCompare(String(a.timestamp_utc || "")));
+
+        INSTANCES = list;
+
+        const select = $("instanceSelect");
         select.innerHTML = "";
 
-        if (events.length === 0) {
-          select.innerHTML = `<option value="">(no events in /ledger/index.json)</option>`;
+        if (INSTANCES.length === 0) {
+          select.innerHTML = `<option value="">(no instances in third.site/instances/index.json)</option>`;
           return;
         }
 
-        for (const e of events) {
+        for (let n = 0; n < INSTANCES.length; n++) {
+          const i = INSTANCES[n];
           const opt = document.createElement("option");
-          opt.value = e.event_id;
-          opt.textContent = `${e.event_id} — ${e.event || ""}`.trim();
+          opt.value = String(n);
+          opt.textContent = instanceLabel(i);
           select.appendChild(opt);
         }
 
-        // Auto-load first event
-        await loadSelectedEvent();
+        await loadSelectedInstance();
       }
 
-      async function loadSelectedEvent() {
+      async function loadSelectedInstance() {
         try {
           setIntegrity("warn", "loading…");
 
-          const eventId = $("eventSelect").value;
-          if (!eventId) return;
+          const ix = $("instanceSelect").value;
+          if (ix === "") return;
 
-          // latest pointer
-          const latestPath = `/ledger/events/${eventId}/latest.json`;
-          const latest = await fetchJson(latestPath);
+          const i = INSTANCES[Number(ix)];
+          const ts = i.timestamp_utc || "";
+          $("ts").value = ts;
 
-          $("latestVersion").value = latest.latest_version || "";
-
-          // decision path is relative to /ledger/events/<id>/
-          const eventBase = `/ledger/events/${eventId}`;
-          const decisionUrl = joinUrl(eventBase, latest.latest_decision);
+          const decisionUrl = abs(i.decision);
+          const declUrl = abs(i.reality_declaration);
 
           $("decisionUrl").href = decisionUrl;
           $("decisionUrl").textContent = decisionUrl;
 
-          const decision = await fetchJson(decisionUrl);
-          $("decisionView").textContent = JSON.stringify(decision, null, 2);
-
-          // declaration path is relative to decision folder
-          const decisionFolder = decisionUrl.replace(/\/[^\/]+$/, ""); // strip filename
-          const declRel = decision?.artifacts?.reality_declaration_json || "./reality_declaration.json";
-          const declUrl = joinUrl(decisionFolder, declRel);
-
           $("declUrl").href = declUrl;
           $("declUrl").textContent = declUrl;
 
-          // try to fetch declaration JSON as text (for hashing), then also pretty-print
+          const decision = await fetchJson(decisionUrl);
+          $("decisionView").textContent = JSON.stringify(decision, null, 2);
+
           const declText = await fetchText(declUrl);
           let declJson = null;
           try { declJson = JSON.parse(declText); } catch (_) {}
           $("declView").textContent = declJson ? JSON.stringify(declJson, null, 2) : declText;
 
-          // integrity check
           const computed = await sha256Hex(declText);
           const expected = decision.declaration_hash_sha256 || "";
 
@@ -250,11 +261,10 @@
       }
 
       async function refreshAll() {
-        await loadSelectedEvent();
+        await bootstrapInstances();
       }
 
-      // Boot
-      bootstrapEvents();
+      bootstrapInstances();
     </script>
   </body>
 </html>
