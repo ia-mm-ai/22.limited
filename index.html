@@ -1,270 +1,230 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Resolution — Witness</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="index" />
+  <title>22.limited — Resolution Registry</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.04);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.68);
+      --faint: rgba(255,255,255,.50);
+      --line: rgba(255,255,255,.10);
+      --shadow: 0 14px 34px rgba(0,0,0,.45);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      --link: rgba(150, 200, 255, .95);
+      --ok: rgba(97, 255, 173, .85);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% 10%, rgba(90,140,255,.12), transparent 55%),
+        radial-gradient(1000px 600px at 85% 25%, rgba(255,120,190,.10), transparent 60%),
+        radial-gradient(800px 600px at 50% 90%, rgba(80,255,170,.06), transparent 55%),
+        var(--bg);
+      line-height:1.55;
+    }
+    a{ color: var(--link); text-decoration:none; }
+    a:hover{ text-decoration: underline; }
 
-    <!-- Witness declaration (machine friendly) -->
-    <link rel="canonical" href="https://22.limited/" />
-    <link rel="alternate" type="application/json" title="witness" href="/witness.json" />
-    <link rel="alternate" type="application/json" title="third.site root" href="https://third.site/root.json" />
-    <link rel="alternate" type="application/json" title="instances index" href="https://third.site/instances/index.json" />
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 28px 18px 80px; }
 
-    <style>
-      body {
-        font-family: -apple-system, system-ui, Arial, sans-serif;
-        margin: 24px;
-        max-width: 980px;
-      }
-      h1 { margin: 0 0 6px 0; }
-      .sub { margin: 0 0 18px 0; color: #666; }
-      .row {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-bottom: 12px;
-      }
-      .card {
-        border: 1px solid #ddd;
-        padding: 14px;
-        border-radius: 12px;
-      }
-      .badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 999px;
-        border: 1px solid #ccc;
-        font-size: 12px;
-        background: #fff;
-      }
-      .mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      }
-      pre {
-        background: #0b0b0b;
-        color: #e8e8e8;
-        padding: 12px;
-        border-radius: 10px;
-        overflow: auto;
-        margin: 0;
-      }
-      a { color: inherit; }
-      small { color: #666; }
-      .ok { border-color: #5bb974; }
-      .warn { border-color: #d7a400; }
-      .bad { border-color: #d14; }
-      button {
-        padding: 10px 12px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        background: #fff;
-        cursor: pointer;
-      }
-      button:hover { background: #f5f5f5; }
-      select, input {
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-      }
-    </style>
-  </head>
+    .topbar{
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 14px 16px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+    .title h1{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      font-weight: 850;
+    }
+    .title .sub{
+      margin-top:6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-family: var(--mono);
+    }
 
-  <body>
-    <h1>Resolution <span class="badge mono">WITNESS</span></h1>
-    <p class="sub">
-      Public witness surface (read-only). Instances are served from
-      <a class="mono" href="https://third.site/instances/index.json" target="_blank" rel="noopener">third.site/instances</a>.
-    </p>
+    .pills{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .pill{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      border-radius:999px;
+      padding:8px 10px;
+      font-size:12px;
+      color: var(--muted);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      white-space:nowrap;
+      font-family: var(--mono);
+    }
+    .pill b{ color: var(--text); font-weight: 850; }
 
-    <div class="card">
-      <div class="row" style="align-items:center; justify-content:space-between;">
-        <div>
-          <div><b>Motion:</b> <span class="badge mono">RESOLUTION</span></div>
-          <div style="margin-top:6px;"><b>Role:</b> <span class="badge mono">DERIVATIVE_WITNESS</span></div>
+    .notice{
+      margin-top:12px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.22);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .notice b{ color: var(--text); }
+
+    .card{
+      margin-top:14px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+    .hd{
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .hd h2{
+      margin:0;
+      font-size: 13px;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 900;
+    }
+    .bd{ padding: 14px 16px 16px; }
+
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding: 12px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+    }
+    .left{ min-width:0; }
+    .id{ font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .name{ margin-top:2px; font-size: 14px; font-weight: 750; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .meta{ margin-top:2px; font-family: var(--mono); font-size: 12px; color: var(--faint); }
+
+    .tag{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--ok);
+      font-weight: 900;
+      white-space:nowrap;
+    }
+
+    .links{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+    }
+    .links a{
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    footer{
+      margin-top: 18px;
+      color: var(--faint);
+      font-size: 12px;
+      text-align:center;
+    }
+    footer .line{
+      margin: 14px auto;
+      height: 1px;
+      max-width: 220px;
+      background: var(--line);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <header class="topbar">
+      <div class="title">
+        <h1>22.limited — Resolution Registry</h1>
+        <div class="sub">Public witness surface (read-only). Resolution confers legitimacy and enforces boundaries.</div>
+      </div>
+      <div class="pills">
+        <div class="pill"><span>surface</span><b>PUBLIC</b></div>
+        <div class="pill"><span>interaction</span><b>FORBIDDEN</b></div>
+        <div class="pill"><span>execution</span><b>FORBIDDEN</b></div>
+        <div class="pill"><span>economics</span><b>FORBIDDEN</b></div>
+        <div class="pill"><span>identity</span><b>FORBIDDEN</b></div>
+      </div>
+    </header>
+
+    <div class="notice">
+      <b>Posture:</b> This surface lists resolution artifacts. It does not accept input. It does not execute actions.
+    </div>
+
+    <section class="card">
+      <div class="hd"><h2>Entries</h2></div>
+      <div class="bd">
+
+        <div class="row">
+          <div class="left">
+            <div class="id">Decision / Proof</div>
+            <div class="name">PROOF_OF_REALITY — RECOGNIZED</div>
+            <div class="meta">timestamp_utc: 2026-01-19T00:22:00Z · mutation: EVOLVE_ONLY</div>
+          </div>
+          <div class="tag">LIVE</div>
         </div>
-        <div class="row" style="margin:0;">
-          <button onclick="refreshAll()">REFRESH</button>
+
+        <div class="links">
+          <a href="https://22.limited/decision.json" target="_blank" rel="noopener">decision.json</a>
+          <a href="https://mm.limited/reality_declaration.json" target="_blank" rel="noopener">reality_declaration.json</a>
+          <a href="https://event.limited/anchor.json" target="_blank" rel="noopener">anchor.json</a>
+          <a href="https://event.limited/manifest.json" target="_blank" rel="noopener">manifest.json</a>
+          <a href="https://event.limited/" target="_blank" rel="noopener">protocol library</a>
         </div>
+
       </div>
+    </section>
 
-      <div style="margin-top:10px;">
-        <small>
-          Root:
-          <a class="mono" href="https://third.site/root.json" target="_blank" rel="noopener">https://third.site/root.json</a>
-          &nbsp;•&nbsp;
-          Entry:
-          <a class="mono" href="https://third.site/instances/index.json" target="_blank" rel="noopener">instances/index.json</a>
-        </small>
-      </div>
-    </div>
+    <footer>
+      <div class="line"></div>
+      22.limited - RADIO 22 LTD - KENTRA INTEGRITY SYSTEMS LTD
+    </footer>
 
-    <div class="card" style="margin-top:14px;">
-      <h3 style="margin-top:0;">Instance</h3>
-      <div class="row" style="align-items:center;">
-        <label>
-          <small>Choose instance (event • timestamp)</small><br />
-          <select id="instanceSelect" onchange="loadSelectedInstance()"></select>
-        </label>
-        <label>
-          <small>Timestamp</small><br />
-          <input id="ts" class="mono" readonly />
-        </label>
-      </div>
-
-      <div style="margin-top:10px;">
-        <div><b>Decision URL:</b> <a id="decisionUrl" class="mono" href="#">—</a></div>
-        <div style="margin-top:6px;"><b>Declaration URL:</b> <a id="declUrl" class="mono" href="#">—</a></div>
-      </div>
-
-      <div style="margin-top:10px;">
-        <div><b>Integrity:</b> <span id="integrity" class="badge mono warn">not checked</span></div>
-        <small>
-          Integrity check compares <span class="mono">decision.declaration_hash_sha256</span> with the computed SHA-256 of
-          <span class="mono">reality_declaration.json</span>.
-        </small>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:14px;">
-      <h3 style="margin-top:0;">Decision (proof_of_reality)</h3>
-      <pre id="decisionView">Loading…</pre>
-    </div>
-
-    <div class="card" style="margin-top:14px;">
-      <h3 style="margin-top:0;">Reality Declaration</h3>
-      <pre id="declView">Loading…</pre>
-    </div>
-
-    <script>
-      const $ = (id) => document.getElementById(id);
-
-      const ROOT = "https://third.site";
-      const INSTANCES_INDEX = `${ROOT}/instances/index.json`;
-
-      function abs(urlOrPath) {
-        if (!urlOrPath) return null;
-        if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")) return urlOrPath;
-        if (urlOrPath.startsWith("/")) return ROOT + urlOrPath;
-        return ROOT + "/" + urlOrPath.replace(/^\.?\//, "");
-      }
-
-      async function fetchJson(url) {
-        const r = await fetch(url, { cache: "no-store" });
-        if (!r.ok) throw new Error(`${url} → ${r.status}`);
-        return await r.json();
-      }
-
-      async function fetchText(url) {
-        const r = await fetch(url, { cache: "no-store" });
-        if (!r.ok) throw new Error(`${url} → ${r.status}`);
-        return await r.text();
-      }
-
-      async function sha256Hex(text) {
-        const enc = new TextEncoder();
-        const bytes = enc.encode(text);
-        const digest = await crypto.subtle.digest("SHA-256", bytes);
-        return Array.from(new Uint8Array(digest))
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("");
-      }
-
-      function setIntegrity(state, msg) {
-        const el = $("integrity");
-        el.textContent = msg;
-        el.classList.remove("ok", "warn", "bad");
-        el.classList.add(state);
-      }
-
-      // We index *instances*, not "events + latest.json".
-      // Your third.site schema already gives us the exact URLs.
-      let INSTANCES = [];
-
-      function instanceLabel(i) {
-        const ev = i.event_id || "unknown";
-        const ts = i.timestamp_utc || i.timestamp || "unknown-time";
-        return `${ev} • ${ts}`;
-      }
-
-      async function bootstrapInstances() {
-        const idx = await fetchJson(INSTANCES_INDEX);
-        const list = Array.isArray(idx.instances) ? idx.instances : [];
-
-        // Sort newest first by timestamp_utc when possible
-        list.sort((a, b) => String(b.timestamp_utc || "").localeCompare(String(a.timestamp_utc || "")));
-
-        INSTANCES = list;
-
-        const select = $("instanceSelect");
-        select.innerHTML = "";
-
-        if (INSTANCES.length === 0) {
-          select.innerHTML = `<option value="">(no instances in third.site/instances/index.json)</option>`;
-          return;
-        }
-
-        for (let n = 0; n < INSTANCES.length; n++) {
-          const i = INSTANCES[n];
-          const opt = document.createElement("option");
-          opt.value = String(n);
-          opt.textContent = instanceLabel(i);
-          select.appendChild(opt);
-        }
-
-        await loadSelectedInstance();
-      }
-
-      async function loadSelectedInstance() {
-        try {
-          setIntegrity("warn", "loading…");
-
-          const ix = $("instanceSelect").value;
-          if (ix === "") return;
-
-          const i = INSTANCES[Number(ix)];
-          const ts = i.timestamp_utc || "";
-          $("ts").value = ts;
-
-          const decisionUrl = abs(i.decision);
-          const declUrl = abs(i.reality_declaration);
-
-          $("decisionUrl").href = decisionUrl;
-          $("decisionUrl").textContent = decisionUrl;
-
-          $("declUrl").href = declUrl;
-          $("declUrl").textContent = declUrl;
-
-          const decision = await fetchJson(decisionUrl);
-          $("decisionView").textContent = JSON.stringify(decision, null, 2);
-
-          const declText = await fetchText(declUrl);
-          let declJson = null;
-          try { declJson = JSON.parse(declText); } catch (_) {}
-          $("declView").textContent = declJson ? JSON.stringify(declJson, null, 2) : declText;
-
-          const computed = await sha256Hex(declText);
-          const expected = decision.declaration_hash_sha256 || "";
-
-          if (!expected) {
-            setIntegrity("warn", "no expected hash in decision");
-          } else if (computed.toLowerCase() === expected.toLowerCase()) {
-            setIntegrity("ok", "hash verified ✓");
-          } else {
-            setIntegrity("bad", `hash mismatch ✗ (computed ${computed.slice(0, 12)}…)`);
-          }
-        } catch (err) {
-          $("decisionView").textContent = String(err);
-          $("declView").textContent = "—";
-          setIntegrity("bad", "error");
-        }
-      }
-
-      async function refreshAll() {
-        await bootstrapInstances();
-      }
-
-      bootstrapInstances();
-    </script>
-  </body>
+  </div>
+</body>
 </html>
