@@ -1,0 +1,42 @@
+{
+  "artifact_type": "PROOF_OF_REALITY",
+  "version": "v1.0",
+  "status": "FINALIZED",
+  "mutation_rule": "EVOLVE_ONLY",
+  "timestamp_utc": "2026-01-19T00:22:00Z",
+
+  "path": ["Recognition", "Presence", "Resolution"],
+
+  "inputs": {
+    "reality_declaration": {
+      "url": "https://mm.limited/reality_declaration.json"
+    },
+    "canonical_anchor": {
+      "url": "https://event.limited/anchor.json"
+    }
+  },
+
+  "checks": {
+    "declaration_reachable": true,
+    "anchor_reachable": true,
+    "anchor_matches_declaration_reference": true,
+    "no_execution_claimed_by_declaration": true,
+    "no_suppression_claimed_by_declaration": true
+  },
+
+  "decision": {
+    "result": "RECOGNIZED",
+    "meaning": "I (Marko Markota) confirm that the referenced Reality Declaration binds exclusively to the referenced Canonical Anchor."
+  },
+
+  "constraints": {
+    "no_execution": true,
+    "no_identity_inference": true,
+    "no_economic_effect": true
+  },
+
+  "lineage": {
+    "supersedes": null,
+    "superseded_by": null
+  }
+}
